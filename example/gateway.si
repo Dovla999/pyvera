@@ -1,0 +1,24 @@
+import "setup.si"
+import "user.si"
+import "bookstore.si"
+import "order.si"
+import "emailnotifier.si"
+
+
+api-gateway EntryGateway {
+    service_registry=ServiceRegistry
+
+    deployment {
+        version="0.0.1"
+        port=9095
+        lang="python"
+        url="http://localhost"
+    }
+
+    gateway-for{
+        User as /api/u
+        Bookstore as /api/b
+        Order as /api/o
+        EmailNotifier as /api/e
+    }
+}

@@ -1,0 +1,26 @@
+msg-pool {
+    group OrderMsgGroup [
+
+        msg OrderCreated [
+            str orderId
+            str userEmail
+        ]
+
+        msg OrderUpdated [
+            str orderId
+            str userEmail
+        ]
+
+        msg OrderDeleted [
+            str orderId
+            str userEmail
+        ]
+    ]
+}
+
+msg-broker Broker {
+
+    channel EV_ORDER_CREATED_CHANNEL(OrderMsgGroup.OrderCreated)
+    channel EV_ORDER_UPDATED_CHANNEL(OrderMsgGroup.OrderUpdated)
+    channel EV_ORDER_DELETED_CHANNEL(OrderMsgGroup.OrderDeleted)
+}

@@ -1,0 +1,42 @@
+import "setup.si"
+import "user.si"
+import "bookstore.si"
+
+service Order {
+    service_registry=ServiceRegistry
+	deployment {
+		version="0.0.1"
+		lang="python"
+	}
+    api {
+
+        @create(OrderMsgGroup.OrderCreated -> Broker.EV_ORDER_CREATED_CHANNEL)
+        @read
+        @update(OrderMsgGroup.OrderUpdated -> Broker.EV_ORDER_UPDATED_CHANNEL)
+        @delete(OrderMsgGroup.OrderDeleted -> Broker.EV_ORDER_DELETED_CHANNEL)
+        typedef Order[
+            @required str user
+            @required list<OrderItem> items
+            double price
+        ]
+
+        typedef OrderItem [
+            str bookId
+            int amount
+        ]
+
+        @rest(method=GET)
+        list<Order> listOrders()
+    }
+}
+
+
+dependency Order -> User {
+    userExist[fallback_static]
+    userEmail[fail_silent]
+}
+
+dependency Order -> Bookstore {
+    bookExists[fallback_static]
+    bookPrice[fallback_static]
+}

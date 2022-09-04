@@ -1,0 +1,31 @@
+import "setup.si"
+
+service Bookstore {
+
+    service_registry=ServiceRegistry
+	deployment {
+		version="0.0.1"
+		lang="python"
+	}
+    api {
+
+        @crud
+        typedef Book [
+            @id str isbn
+            @required str title
+            @required str author
+            str category
+            @required double price
+        ]
+
+        @rest(method=GET)
+        list<Book> listBooks()
+
+        @rest(method=GET)
+        bool bookExists(str isbn)
+
+        @rest(method=GET)
+        double bookPrice(str isbn)
+    }
+
+}

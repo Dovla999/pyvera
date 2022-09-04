@@ -1,0 +1,18 @@
+config-server ConfigServer {
+	search_path=""
+	deployment {
+		version="0.0.1"
+		lang="python"
+		port=9090
+	}
+}
+
+service-registry ServiceRegistry {
+	client_mode=False
+	deployment {
+		version="0.0.1"
+		port=9091
+		lang="python"
+		url="http://localhost"
+	}
+}

@@ -1,0 +1,31 @@
+import "setup.si"
+
+service EmailNotifier {
+
+    service_registry=ServiceRegistry
+	deployment {
+		version="0.0.1"
+		lang="python"
+	}
+    api {
+
+        typedef Notification [
+            str orderId
+            str userEmail
+        ]
+
+        @rest(method=GET)
+        list<Notification> listNotifications()
+
+        internal {
+            @consumer(OrderMsgGroup.OrderCreated <- Broker.EV_ORDER_CREATED_CHANNEL)
+            void orderCreated()
+
+            @consumer(OrderMsgGroup.OrderUpdated <- Broker.EV_ORDER_UPDATED_CHANNEL)
+            void orderUpdated()
+
+            @consumer(OrderMsgGroup.OrderDeleted <- Broker.EV_ORDER_DELETED_CHANNEL)
+            void orderDeleted()
+        }
+    }
+}

@@ -1,0 +1,27 @@
+import "setup.si"
+
+service User {
+    service_registry=ServiceRegistry
+	deployment {
+		version="0.0.1"
+		lang="python"
+	}
+    api {
+
+        @crud
+        typedef User [
+            @id str username
+            @required str password
+            @required str email
+        ]
+
+        @rest(method=GET)
+        list<User> listUsers()
+
+        @rest(method=GET)
+        bool userExist(str username)
+
+        @rest(method=GET)
+        str userEmail(str username)
+    }
+}
