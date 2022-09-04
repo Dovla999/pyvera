@@ -1,7 +1,7 @@
 """{{header()}}"""
 
 import pymongo
-from typing import Optional, List
+from typing import Optional, List, Dict, Set
 
 from pydantic import BaseModel
 
@@ -11,7 +11,7 @@ from beanie import Indexed
 class {{typedef.name}}(Document):
     {%- for field in typedef.fields %}
     {% if field.required %}
-    {{field.name}}: {{field.type|silvera_type_to_pydantic}}
+    {{field.name}}:{{field.type|silvera_type_to_pydantic}} 
     {% endif %}
     {% if not field.required %}
     {{field.name}}: Optional[{{field.type|silvera_type_to_pydantic}}] = None

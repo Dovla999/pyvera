@@ -14,6 +14,7 @@ from silvera.core import (
     APIGateway,
     TypeDef,
 )
+from silvera.core import TypedList, TypeDef, TypedSet, TypedDict
 
 
 def get_root_path():
@@ -39,6 +40,21 @@ def first_lower(string):
     return string[0].lower() + string[1:]
 
 
+def convert_type(_type):
+    def _convert_type(_type):
+        if isinstance(_type, TypeDef):
+            return first_upper(_type.name)
+        if isinstance(_type, TypedList):
+            return f"List[{_convert_type(_type.type)}]"
+        if isinstance(_type, TypedSet):
+            return f"Set[{_convert_type(_type.type)}]"
+        if isinstance(_type, TypedDict):
+            return f"Dict[{_convert_type(_type.key_type)}, {_convert_type(_type.value_type)}]"
+        return _type
+
+    return _convert_type(_type)
+
+
 def silvera_type_to_pydantic(field_type):
     primitives_map = {
         "date": "date",
@@ -50,24 +66,24 @@ def silvera_type_to_pydantic(field_type):
         "set": "set",
         "dict": "dict",
     }
-    return primitives_map[field_type] if field_type in primitives_map else field_type
+    return (
+        primitives_map[field_type]
+        if field_type in primitives_map
+        else convert_type(field_type)
+    )
 
 
 class ServiceGenerator:
     def __init__(self, service: ServiceDecl, output_dir):
         self.service = service
         self.env = self._init_env()
-        # self.main_path = csharp_struct(output_dir, service.name)
 
     def _init_env(self):
         env = Environment(loader=FileSystemLoader(get_templates_path()))
 
         env.filters["first_upper"] = first_upper
         env.filters["first_lower"] = first_lower
-        # env.filters["first_upper_fqn"] = first_upper_fqn
         env.filters["silvera_type_to_pydantic"] = lambda t: silvera_type_to_pydantic(t)
-
-        env.globals["as_type"] = lambda t: "Models." + t
         env.globals["service_name"] = self.service.name
         env.globals[
             "header"
@@ -76,14 +92,16 @@ class ServiceGenerator:
         return env
 
     def generate_model(self):
-        pass
-
-    def generate(self):
         for typedef in self.service.api.typedefs:
             class_template = self.env.get_template("model.j2")
+            if not os.path.exists("models"):
+                os.makedirs("models")
             class_template.stream({"typedef": typedef}).dump(
-                os.path.join("", typedef.name + ".py")
+                os.path.join("models", typedef.name + ".py")
             )
+
+    def generate(self):
+        self.generate_model()
 
 
 def generate_service(service, output_dir):
