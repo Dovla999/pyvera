@@ -8,12 +8,21 @@ from pydantic import BaseModel
 from beanie import Document
 from beanie import Indexed
 
-class {{typedef.name}}(Document):
+class {{typedef.name|upper_case}}(Document):
     {%- for field in typedef.fields %}
+    {% if field.name != id_field %}
     {% if field.required %}
     {{field.name}}:{{field.type|silvera_type_to_pydantic}} 
     {% endif %}
     {% if not field.required %}
     {{field.name}}: Optional[{{field.type|silvera_type_to_pydantic}}] = None
-    {% endif %}    
+    {% endif %}
+    {% else %}
+    {{field.name}}: Indexed({{field.type|silvera_type_to_pydantic}} , unique=True)
+    {% endif %} 
+    {%- endfor %}
+
+class {{typedef.name|upper_case}}(Document):
+    {%- for field in typedef.fields %}
+    {{field.name}}: Optional[{{field.type|silvera_type_to_pydantic}}] = None 
     {%- endfor %}

@@ -32,18 +32,18 @@ def timestamp():
     return "{:%Y-%m-%d %H:%M:%S}".format(datetime.now())
 
 
-def first_upper(string):
+def upper_case(string):
     return string[0].upper() + string[1:]
 
 
-def first_lower(string):
+def lower_case(string):
     return string[0].lower() + string[1:]
 
 
 def convert_type(_type):
     def _convert_type(_type):
         if isinstance(_type, TypeDef):
-            return first_upper(_type.name)
+            return upper_case(_type.name)
         if isinstance(_type, TypedList):
             return f"List[{_convert_type(_type.type)}]"
         if isinstance(_type, TypedSet):
@@ -81,8 +81,8 @@ class ServiceGenerator:
     def _init_env(self):
         env = Environment(loader=FileSystemLoader(get_templates_path()))
 
-        env.filters["first_upper"] = first_upper
-        env.filters["first_lower"] = first_lower
+        env.filters["upper_case"] = upper_case
+        env.filters["lower_case"] = lower_case
         env.filters["silvera_type_to_pydantic"] = lambda t: silvera_type_to_pydantic(t)
         env.globals["service_name"] = self.service.name
         env.globals[
@@ -93,15 +93,35 @@ class ServiceGenerator:
 
     def generate_model(self):
         for typedef in self.service.api.typedefs:
+            id_field = (
+                "id"
+                if [f for f in typedef.fields if f.isid] == []
+                else [f for f in typedef.fields if f.isid][0].name
+            )
             class_template = self.env.get_template("model.j2")
             if not os.path.exists("models"):
                 os.makedirs("models")
-            class_template.stream({"typedef": typedef}).dump(
-                os.path.join("models", typedef.name + ".py")
+            class_template.stream({"typedef": typedef, "id_field": id_field}).dump(
+                os.path.join("models", lower_case(typedef.name) + ".py")
+            )
+
+    def generate_api(self):
+        for typedef in self.service.api.typedefs:
+            id_field = (
+                "id"
+                if [f for f in typedef.fields if f.isid] == []
+                else [f for f in typedef.fields if f.isid][0].name
+            )
+            class_template = self.env.get_template("api.j2")
+            if not os.path.exists("api"):
+                os.makedirs("api")
+            class_template.stream({"typedef": typedef, "id_field": id_field}).dump(
+                os.path.join("api", lower_case(typedef.name) + ".py")
             )
 
     def generate(self):
         self.generate_model()
+        self.generate_api()
 
 
 def generate_service(service, output_dir):
