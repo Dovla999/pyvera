@@ -18,7 +18,7 @@ async def get_{{typedef.name|lower_case}}_from_db(key):
     if not {{typedef.name|lower_case}}:
         raise HTTPException(status_code=404, detail="{{typedef.name|upper_case}} record not found!")
 
-
+{% if "@read" in typedef.crud_dict %}
 @router.get("/")
 async def get_all_{{typedef.name|lower_case}}() -> List[{{typedef.name|upper_case}}]:
     return await {{typedef.name|upper_case}}.find_all().to_list()
@@ -27,8 +27,8 @@ async def get_all_{{typedef.name|lower_case}}() -> List[{{typedef.name|upper_cas
 @router.get("/{id}")
 async def get_{{typedef.name|lower_case}}(id) -> {{typedef.name|upper_case}}:
     return await get_{{typedef.name|lower_case}}_from_db(id)
-
-
+{%- endif %}
+{% if "@create" in typedef.crud_dict %}
 @router.post(
     "/",
 )
@@ -37,8 +37,8 @@ async def create_{{typedef.name|lower_case}}({{typedef.name|lower_case}}: {{type
         return await {{typedef.name|lower_case}}.create()
     except BaseException as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-
+{%- endif %}
+{% if "@update" in typedef.crud_dict %}
 @router.patch(
     "/{id}",
 )
@@ -62,10 +62,18 @@ async def put_{{typedef.name|lower_case}}(id, {{typedef.name|lower_case}}: {{typ
     {{typedef.name|lower_case}} = await get_{{typedef.name|lower_case}}_from_db(id)
     await {{typedef.name|lower_case}}.update(update_query)
     return {{typedef.name|lower_case}}
-
-
+{%- endif %}
+{% if "@delete" in typedef.crud_dict %}
 @router.delete("/{id}")
 async def delete_{{typedef.name|lower_case}}(id) -> dict:
     {{typedef.name|lower_case}} = await get_{{typedef.name|lower_case}}_from_db(id)
     await {{typedef.name|lower_case}}.delete()
     return {"message": "{{typedef.name|upper_case}} deleted successfully"}
+{%- endif %}
+
+{%- for function in api.functions %}
+@router.{{function.http_verb|all_lower}}("/{{function.rest_path}}")
+async def {{function.name}}({{function|get_params}}) -> {{function.ret_type|silvera_type_to_pydantic}}:
+    # TODO: IMPLEMENT METHOD
+    pass
+{% endfor %}

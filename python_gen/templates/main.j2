@@ -1,0 +1,38 @@
+from fastapi import FastAPI
+from beanie import init_beanie
+import motor.motor_asyncio
+
+{%- for typedef in typedefs %}
+from models.{{typedef.name|lower_case}} import {{typedef.name|upper_case}}
+from api.{{typedef.name|lower_case}} import router as {{typedef.name|upper_case}}Router 
+{%- endfor %}
+
+async def init_db():
+    client = motor.motor_asyncio.AsyncIOMotorClient("mongodb://localhost:27017/")
+
+    await init_beanie(
+        database=client.db_name,
+        document_models=[
+            {%- for typedef in typedefs %}
+            {{typedef.name|upper_case}}
+            {%- endfor %}
+        ],
+    )
+
+
+app = FastAPI()
+
+
+@app.on_event("startup")
+async def start_db():
+    await init_db()
+
+
+
+
+
+
+
+{%- for typedef in typedefs %}
+app.include_router({{typedef.name|upper_case}}Router, tags=["{{typedef.name|upper_case}}s"], prefix="/{{typedef.name|lower_case}}s")
+{%- endfor %}

@@ -5,7 +5,7 @@ from collections import defaultdict
 from jinja2 import Environment, FileSystemLoader
 
 from silvera.generator.registration import GeneratorDesc
-from silvera.const import HOST_CONTAINER, HTTP_POST
+from silvera.const import HOST_CONTAINER, HTTP_POST, HTTP_PUT
 from silvera.core import (
     CustomType,
     ConfigServerDecl,
@@ -14,7 +14,7 @@ from silvera.core import (
     APIGateway,
     TypeDef,
 )
-from silvera.core import TypedList, TypeDef, TypedSet, TypedDict
+from silvera.core import TypedList, TypeDef, TypedSet, TypedDict, Function
 
 
 def get_root_path():
@@ -38,6 +38,17 @@ def upper_case(string):
 
 def lower_case(string):
     return string[0].lower() + string[1:]
+
+
+def all_lower(string):
+    return string.lower()
+
+
+def get_params(func: Function):
+    params = [f"{p.name}: {convert_type(p.type)}" for p in func.params]
+    if func.http_verb in {HTTP_POST, HTTP_PUT}:
+        params.append(f"dto: dict")
+    return ", ".join(params)
 
 
 def convert_type(_type):
@@ -83,6 +94,8 @@ class ServiceGenerator:
 
         env.filters["upper_case"] = upper_case
         env.filters["lower_case"] = lower_case
+        env.filters["all_lower"] = all_lower
+        env.filters["get_params"] = lambda f: get_params(f)
         env.filters["silvera_type_to_pydantic"] = lambda t: silvera_type_to_pydantic(t)
         env.globals["service_name"] = self.service.name
         env.globals[
@@ -115,13 +128,22 @@ class ServiceGenerator:
             class_template = self.env.get_template("api.j2")
             if not os.path.exists("api"):
                 os.makedirs("api")
-            class_template.stream({"typedef": typedef, "id_field": id_field}).dump(
-                os.path.join("api", lower_case(typedef.name) + ".py")
-            )
+            class_template.stream(
+                {"typedef": typedef, "id_field": id_field, "api": self.service.api}
+            ).dump(os.path.join("api", lower_case(typedef.name) + ".py"))
+
+    def generate_main(self):
+        class_template = self.env.get_template("main.j2")
+        class_template.stream(
+            {
+                "typedefs": self.service.api.typedefs,
+            }
+        ).dump(os.path.join("", "main" + ".py"))
 
     def generate(self):
         self.generate_model()
         self.generate_api()
+        self.generate_main()
 
 
 def generate_service(service, output_dir):
