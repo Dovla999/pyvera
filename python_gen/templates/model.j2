@@ -22,7 +22,7 @@ class {{typedef.name|upper_case}}(Document):
     {% endif %} 
     {%- endfor %}
 
-class {{typedef.name|upper_case}}(Document):
+class {{typedef.name|upper_case}}AllOptional(Document):
     {%- for field in typedef.fields %}
     {{field.name}}: Optional[{{field.type|silvera_type_to_pydantic}}] = None 
     {%- endfor %}
