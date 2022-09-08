@@ -1,0 +1,70 @@
+from beanie import PydanticObjectId
+from fastapi import APIRouter, HTTPException
+from typing import List
+from pydantic import BaseModel
+
+from models.{{typedef|lower_case}} import {{typedef|upper_case}}, {{typedef|upper_case}}AllOptional
+
+
+router = APIRouter()
+
+
+async def get_{{typedef|lower_case}}_from_db(key):
+    {{typedef|lower_case}} = await {{typedef|upper_case}}.find({"{{typedef.id_field}}": key}).first_or_none() or await {{typedef|upper_case}}.get(
+        key
+    )
+    if not {{typedef|lower_case}}:
+        raise HTTPException(status_code=404, detail="{{typedef|upper_case}} record not found!")
+
+
+@router.get("/")
+async def get_all_{{typedef|lower_case}}() -> List[{{typedef|upper_case}}]:
+    return await {{typedef|upper_case}}.find_all().to_list()
+    # return data
+
+
+@router.get("/{id}")
+async def get_{{typedef|lower_case}}(id) -> {{typedef|upper_case}}:
+    return await get_{{typedef|lower_case}}_from_db(id)
+
+
+@router.post(
+    "/",
+)
+async def create_{{typedef|lower_case}}({{typedef|lower_case}}: {{typedef|upper_case}}) -> {{typedef|upper_case}}:
+    try:
+        return await {{typedef|lower_case}}.create()
+    except BaseException as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.patch(
+    "/{id}",
+)
+async def put_{{typedef|lower_case}}(id, {{typedef|lower_case}}: {{typedef|upper_case}}AllOptional) -> {{typedef|upper_case}}:
+    req = {k: v for k, v in {{typedef|lower_case}}.dict().items() if v is not None and v is not ""}
+    update_query = {"$set": {field: value for field, value in req.items()}}
+
+    {{typedef|lower_case}} = await get_{{typedef|lower_case}}_from_db(id)
+
+    await {{typedef|lower_case}}.update(update_query)
+    return {{typedef|lower_case}}
+
+
+@router.put(
+    "/{id}",
+)
+async def put_{{typedef|lower_case}}(id, {{typedef|lower_case}}: {{typedef|upper_case}}) -> {{typedef|upper_case}}:
+    req = {k: v for k, v in {{typedef|lower_case}}.dict().items() if v is not None and v is not ""}
+    update_query = {"$set": {field: value for field, value in req.items()}}
+
+    {{typedef|lower_case}} = await get_{{typedef|lower_case}}_from_db(id)
+    await {{typedef|lower_case}}.update(update_query)
+    return {{typedef|lower_case}}
+
+
+@router.delete("/{id}")
+async def delete_{{typedef|lower_case}}(id) -> dict:
+    {{typedef|lower_case}} = await get_{{typedef|lower_case}}_from_db(id)
+    await {{typedef|lower_case}}.delete()
+    return {"message": "{{typedef|upper_case}} deleted successfully"}
