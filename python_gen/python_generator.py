@@ -105,6 +105,9 @@ class ServiceGenerator:
         return env
 
     def generate_model(self):
+        if not os.path.exists(f"output/{upper_case(self.service.name)}"):
+            os.makedirs(f"output/{upper_case(self.service.name)}")
+        open(f"output/{upper_case(self.service.name)}/openapi.json", "a").close()
         for typedef in self.service.api.typedefs:
             id_field = (
                 "id"

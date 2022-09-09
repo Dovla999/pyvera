@@ -1,11 +1,17 @@
 from fastapi import FastAPI
 from beanie import init_beanie
 import motor.motor_asyncio
+from aiokafka import AIOKafkaProducer
+import asyncio
+
 
 {%- for typedef in typedefs %}
 from models.{{typedef.name|lower_case}} import {{typedef.name|upper_case}}
 from api.{{typedef.name|lower_case}} import router as {{typedef.name|upper_case}}Router 
 {%- endfor %}
+
+
+loop = asyncio.get_event_loop()
 
 async def init_db():
     client = motor.motor_asyncio.AsyncIOMotorClient("mongodb://localhost:27017/")
