@@ -1,0 +1,30 @@
+import os
+import asyncio
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+
+from .consumer_methods import methods
+
+loop = asyncio.get_event_loop()
+
+KAFKA_INSTANCE = os.getenv("KAFKA_INSTANCE", "localhost:9092")
+aioproducer = AIOKafkaProducer(loop=loop, bootstrap_servers=KAFKA_INSTANCE)
+consumer = AIOKafkaConsumer(
+    {{topic_list}},
+    bootstrap_servers=KAFKA_INSTANCE,
+    loop=loop,
+)
+
+
+async def consume():
+    await consumer.start()
+    try:
+        async for msg in consumer:
+            for method in methods[msg.topic]:
+                await method(msg)
+
+    finally:
+        await consumer.stop()
+
+
+async def produce(topicname, message):
+    await aioproducer.send(topicname, json.dumps(message.dict()).encode("ascii"))
