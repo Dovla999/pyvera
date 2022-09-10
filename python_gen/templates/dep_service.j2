@@ -1,0 +1,50 @@
+"""{{header()}}"""
+import requests
+import json
+from circuitbreaker import *
+from datetime.datetime import now
+
+{%- for typedef in typedefs %}
+from models.{{typedef.name|lower_case}} import {{typedef.name|upper_case}}, {{typedef.name|upper_case}}AllOptional
+{% endfor %}
+
+cached_values = {}
+
+{%- for function in functions %}
+{# @router.{{function.http_verb|all_lower}}("/{{function.rest_path}}")
+async def {{function.name}}({{function|get_params}}) -> {{function.ret_type|silvera_type_to_pydantic}}:
+    # TODO: IMPLEMENT METHOD
+    {%- for message, channel in function.produces %}
+            await produce({{channel.name}},{{message.split(".")[1]}}())
+    {%- endfor %}
+    pass #}
+
+
+{% if function.cb_pattern and function.cb_pattern != "fail_fast" %}
+
+def {{function.name}}_fallback({{function|get_params}}):
+{% if function.cb_pattern and function.cb_pattern == "fail_silent" %}
+    return
+{% endif %}
+{% if function.cb_pattern and function.cb_pattern == "fallback_method" %}
+    #TODO : IMPLEMENT THIS
+    pass
+{% endif %}
+{% if function.cb_pattern and function.cb_pattern == "fallback_static" %}
+    return {{function.ret_type|silvera_type_to_pydantic_default}}
+{% endif %}
+{% if function.cb_pattern and function.cb_pattern == "fallback_cache" %}
+    return cached_values[({{function.name}}, *[{{function|get_params_wo_types}}])]
+{% endif %}
+
+@circuit(
+    fallback_function={{function.name}}_fallback
+)
+{% endif %}
+def {{function.name}}({{function|get_params}}):
+    resp = requests.{{function.dep.http_verb|all_lower}}(f"{{function.rest_path}}")
+{% if function.cb_pattern and function.cb_pattern == "fallback_cache" %}
+    cached_values[({{function.name}}, *[{{function|get_params_wo_types}}])] = resp.json()
+{% endif %}    
+    return resp.json()
+{% endfor %}

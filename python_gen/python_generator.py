@@ -53,6 +53,11 @@ def get_params(func: Function):
     return ", ".join(params)
 
 
+def get_params_wo_types(func: Function):
+    params = [f"{p.name}" for p in func.params]
+    return ", ".join(params)
+
+
 def convert_type(_type):
     def _convert_type(_type):
         if isinstance(_type, TypeDef):
@@ -86,6 +91,28 @@ def silvera_type_to_pydantic(field_type):
     )
 
 
+def silvera_type_to_pydantic_default(field_type):
+    primitives_map = {
+        "date": "now()",
+        "int": "0",
+        "float": "0.0",
+        "double": "0.0",
+        "str": "",
+        "list": "[]",
+        "set": "\{\}",
+        "dict": "\{\}",
+        "void": "",
+    }
+    if field_type in primitives_map:
+        return primitives_map[field_type]
+    _type = convert_type(field_type)
+    if _type.startswith("List["):
+        return "[]"
+    if _type.startswith("Dict[") or _type.startswith("Set["):
+        return "\{\}"
+    return _type + "()"
+
+
 class ServiceGenerator:
     def __init__(self, service: ServiceDecl, output_dir):
         self.service = service
@@ -98,7 +125,11 @@ class ServiceGenerator:
         env.filters["lower_case"] = lower_case
         env.filters["all_lower"] = all_lower
         env.filters["get_params"] = lambda f: get_params(f)
+        env.filters["get_params_wo_types"] = lambda f: get_params_wo_types(f)
         env.filters["silvera_type_to_pydantic"] = lambda t: silvera_type_to_pydantic(t)
+        env.filters[
+            "silvera_type_to_pydantic_default"
+        ] = lambda t: silvera_type_to_pydantic_default(t)
         env.globals["service_name"] = self.service.name
         env.filters["is_primitive_type"] = lambda t: is_primitive_type(t)
         env.globals[
@@ -111,7 +142,8 @@ class ServiceGenerator:
         if not os.path.exists(f"output/{upper_case(self.service.name)}"):
             os.makedirs(f"output/{upper_case(self.service.name)}")
         open(f"output/{upper_case(self.service.name)}/openapi.json", "a").close()
-        for typedef in self.service.api.typedefs:
+        print(self.service.dep_typedefs)
+        for typedef in self.service.api.typedefs + self.service.dep_typedefs:
             id_field = (
                 "id"
                 if [f for f in typedef.fields if f.isid] == []
@@ -194,6 +226,16 @@ class ServiceGenerator:
             os.path.join(f"{self.service.name}/api", "functions" + ".py")
         )
 
+    def generate_dep_service(self):
+        class_template = self.env.get_template("dep_service.j2")
+        class_template.stream(
+            {
+                "api": self.service.api,
+                "functions": self.service.dep_functions,
+                "typedefs": self.service.api.typedefs + self.service.dep_typedefs,
+            }
+        ).dump(os.path.join(f"{self.service.name}", "dep_service" + ".py"))
+
     def generate_main(self):
         class_template = self.env.get_template("main.j2")
         class_template.stream(
@@ -203,11 +245,17 @@ class ServiceGenerator:
         ).dump(os.path.join(f"{self.service.name}", "main" + ".py"))
 
     def generate(self):
+        for df in self.service.dep_functions:
+            for p in df.params:
+                print(
+                    f"THIS IS SOME UNKNOWN BULLSHIT NO ONE KNOWS WHAT IT IS{str(p.type)}"
+                )
         self.generate_model()
         self.generate_api()
         self.generate_main()
         self.generate_messaging()
         self.generate_functions()
+        self.generate_dep_service()
 
 
 def generate_service(service, output_dir):
