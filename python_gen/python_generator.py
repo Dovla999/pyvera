@@ -144,10 +144,9 @@ class ServiceGenerator:
             )
 
     def generate_messaging(self):
-        class_template = self.env.get_template("messaging/messaging.j2")
         if not os.path.exists(f"{self.service.name}/messaging"):
             os.makedirs(f"{self.service.name}/messaging")
-
+        class_template = self.env.get_template("messaging/messaging.j2")
         if not self.service.api.internal:
             return
         functions = [func for func in self.service.api.internal.functions]
@@ -159,6 +158,13 @@ class ServiceGenerator:
                         topics.add(sub.channel.name)
         class_template.stream({"messaging": '","'.join(topics)}).dump(
             os.path.join(f"{self.service.name}/messaging", "messaging" + ".py")
+        )
+        messages = []
+        for group in self.service.parent.model.msg_pool.groups:
+            messages += [message for message in group.messages]
+        class_template = self.env.get_template("messaging/message_models.j2")
+        class_template.stream({"messages": messages}).dump(
+            os.path.join(f"{self.service.name}/messaging", "message_models" + ".py")
         )
 
     def generate_main(self):

@@ -1,0 +1,19 @@
+"""{{header()}}"""
+
+from typing import Optional, List, Dict, Set
+
+from pydantic import BaseModel
+
+{%- for message in messages %}
+
+class {{message.name|upper_case}}(BaseModel):
+    {%- for field in message.fields %}
+    {% if field.required %}
+    {{field.name}}:{{field.type|silvera_type_to_pydantic}} 
+    {% endif %}
+    {% if not field.required %}
+    {{field.name}}: Optional[{{field.type|silvera_type_to_pydantic}}] = None
+    {% endif %}
+    {%- endfor %}
+    pass
+{%- endfor %}
