@@ -1,0 +1,24 @@
+"""{{header()}}"""
+import json
+
+methods = {}
+
+{%- for function in message_per_function %}
+
+async def {{function}}(msg):
+    payload = json.loads(msg.value.decode())
+    # IMPLEMENT MESSAGE HANDLING
+    return
+
+
+{%- endfor %}
+
+{%- for topic in topics %}
+methods["{{topic}}"]=[]
+{%- endfor %}
+
+{%- for channel in function_per_channel %}
+{%- for function in function_per_channel[channel] %}
+methods["{{channel.name}}"].append({{function}})
+{%- endfor %}
+{%- endfor %}

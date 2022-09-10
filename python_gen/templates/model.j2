@@ -7,6 +7,16 @@ from pydantic import BaseModel
 
 from beanie import Document
 from beanie import Indexed
+    {%- for typedef_inner in api.typedefs %}
+
+    {% if typedef_inner.name != typedef.name %}
+            {%- for field in typedef.fields %}
+                {% if typedef_inner.name|all_lower in field.type|silvera_type_to_pydantic|all_lower %}
+from .{{typedef_inner.name|lower_case}} import {{typedef_inner.name|upper_case}}, {{typedef_inner.name|upper_case}}AllOptional
+                {%endif%}
+            {%- endfor %}
+    {%endif%}   
+    {%- endfor %}
 
 class {{typedef.name|upper_case}}(Document):
     {%- for field in typedef.fields %}

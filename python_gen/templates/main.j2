@@ -11,6 +11,7 @@ from messaging.messaging import consume, aioproducer
 from models.{{typedef.name|lower_case}} import {{typedef.name|upper_case}}
 from api.{{typedef.name|lower_case}} import router as {{typedef.name|upper_case}}Router 
 {%- endfor %}
+from api.functions import router as FunctionsRouter 
 
 
 loop = asyncio.get_event_loop()
@@ -22,7 +23,7 @@ async def init_db():
         database=client.db_name,
         document_models=[
             {%- for typedef in typedefs %}
-            {{typedef.name|upper_case}}
+            {{typedef.name|upper_case}},
             {%- endfor %}
         ],
     )
@@ -53,3 +54,4 @@ async def shutdown_kafka():
 {%- for typedef in typedefs %}
 app.include_router({{typedef.name|upper_case}}Router, tags=["{{typedef.name|upper_case}}s"], prefix="/{{typedef.name|lower_case}}s")
 {%- endfor %}
+app.include_router(FunctionsRouter)

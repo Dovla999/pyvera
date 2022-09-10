@@ -1,0 +1,25 @@
+"""{{header()}}"""
+
+from beanie import PydanticObjectId
+from fastapi import APIRouter, HTTPException
+from typing import List
+from pydantic import BaseModel
+
+{%- for typedef in api.typedefs %}
+from models.{{typedef.name|lower_case}} import {{typedef.name|upper_case}}, {{typedef.name|upper_case}}AllOptional
+{% endfor %}
+
+from messaging.messaging import produce
+from messaging.message_models import *
+
+router = APIRouter()
+
+{%- for function in api.functions %}
+@router.{{function.http_verb|all_lower}}("/{{function.rest_path}}")
+async def {{function.name}}({{function|get_params}}) -> {{function.ret_type|silvera_type_to_pydantic}}:
+    # TODO: IMPLEMENT METHOD
+    {%- for message, channel in function.produces %}
+            await produce({{channel.name}},{{message.split(".")[1]}}())
+    {%- endfor %}
+    pass
+{% endfor %}

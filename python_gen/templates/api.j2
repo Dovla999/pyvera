@@ -7,6 +7,8 @@ from pydantic import BaseModel
 
 from models.{{typedef.name|lower_case}} import {{typedef.name|upper_case}}, {{typedef.name|upper_case}}AllOptional
 
+from messaging.messaging import produce
+from messaging.message_models import *
 
 router = APIRouter()
 
@@ -21,11 +23,21 @@ async def get_{{typedef.name|lower_case}}_from_db(key):
 {% if "@read" in typedef.crud_dict %}
 @router.get("/")
 async def get_all_{{typedef.name|lower_case}}() -> List[{{typedef.name|upper_case}}]:
-    return await {{typedef.name|upper_case}}.find_all().to_list()
-
+    data =  await {{typedef.name|upper_case}}.find_all().to_list()
+    {%- if typedef.crud_dict['@read'] %}
+    {%- set message, channel, _ = typedef.crud_dict['@read'] %}
+    # TODO : Fill in the fields
+    await produce("{{channel}}",{{message.split(".")[1]}}())
+    {%- endif %}
+    return data
 
 @router.get("/{id}")
 async def get_{{typedef.name|lower_case}}(id) -> {{typedef.name|upper_case}}:
+    {%- if typedef.crud_dict['@read'] %}
+    {%- set message, channel, _ = typedef.crud_dict['@read'] %}
+    # TODO : Fill in the fields
+    await produce("{{channel}}",{{message.split(".")[1]}}())
+    {%- endif %}
     return await get_{{typedef.name|lower_case}}_from_db(id)
 {%- endif %}
 {% if "@create" in typedef.crud_dict %}
@@ -34,21 +46,35 @@ async def get_{{typedef.name|lower_case}}(id) -> {{typedef.name|upper_case}}:
 )
 async def create_{{typedef.name|lower_case}}({{typedef.name|lower_case}}: {{typedef.name|upper_case}}) -> {{typedef.name|upper_case}}:
     try:
-        return await {{typedef.name|lower_case}}.create()
+        {{typedef.name|lower_case}} =  await {{typedef.name|lower_case}}.create()
+        {%- if typedef.crud_dict['@create'] %}
+        {%- set message, channel, _ = typedef.crud_dict['@create'] %}
+        # TODO : Fill in the fields
+        await produce("{{channel}}",{{message.split(".")[1]}}())
+        {%- endif %}
+        return {{typedef.name|lower_case}}
     except BaseException as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
 {%- endif %}
 {% if "@update" in typedef.crud_dict %}
 @router.patch(
     "/{id}",
 )
 async def put_{{typedef.name|lower_case}}(id, {{typedef.name|lower_case}}: {{typedef.name|upper_case}}AllOptional) -> {{typedef.name|upper_case}}:
-    req = {k: v for k, v in {{typedef.name|lower_case}}.dict().items() if v is not None and v is not ""}
+    req = {k: v for k, v in {{typedef.name|lower_case}}.dict().items() if v is not None and v != ""}
     update_query = {"$set": {field: value for field, value in req.items()}}
 
     {{typedef.name|lower_case}} = await get_{{typedef.name|lower_case}}_from_db(id)
 
     await {{typedef.name|lower_case}}.update(update_query)
+
+    {%- if typedef.crud_dict['@update'] %}
+    {%- set message, channel, _ = typedef.crud_dict['@update'] %}
+    # TODO : Fill in the fields
+    await produce("{{channel}}",{{message.split(".")[1]}}())
+    {%- endif %}
     return {{typedef.name|lower_case}}
 
 
@@ -56,11 +82,17 @@ async def put_{{typedef.name|lower_case}}(id, {{typedef.name|lower_case}}: {{typ
     "/{id}",
 )
 async def put_{{typedef.name|lower_case}}(id, {{typedef.name|lower_case}}: {{typedef.name|upper_case}}) -> {{typedef.name|upper_case}}:
-    req = {k: v for k, v in {{typedef.name|lower_case}}.dict().items() if v is not None and v is not ""}
+    req = {k: v for k, v in {{typedef.name|lower_case}}.dict().items() if v is not None and v != ""}
     update_query = {"$set": {field: value for field, value in req.items()}}
 
     {{typedef.name|lower_case}} = await get_{{typedef.name|lower_case}}_from_db(id)
     await {{typedef.name|lower_case}}.update(update_query)
+
+    {%- if typedef.crud_dict['@update'] %}
+    {%- set message, channel, _ = typedef.crud_dict['@update'] %}
+    # TODO : Fill in the fields
+    await produce("{{channel}}",{{message.split(".")[1]}}())
+    {%- endif %}
     return {{typedef.name|lower_case}}
 {%- endif %}
 {% if "@delete" in typedef.crud_dict %}
@@ -68,12 +100,10 @@ async def put_{{typedef.name|lower_case}}(id, {{typedef.name|lower_case}}: {{typ
 async def delete_{{typedef.name|lower_case}}(id) -> dict:
     {{typedef.name|lower_case}} = await get_{{typedef.name|lower_case}}_from_db(id)
     await {{typedef.name|lower_case}}.delete()
+    {%- if typedef.crud_dict['@delete'] %}
+    {%- set message, channel, _ = typedef.crud_dict['@delete'] %}
+    # TODO : Fill in the fields
+    await produce("{{channel}}",{{message.split(".")[1]}}())
+    {%- endif %}
     return {"message": "{{typedef.name|upper_case}} deleted successfully"}
 {%- endif %}
-
-{%- for function in api.functions %}
-@router.{{function.http_verb|all_lower}}("/{{function.rest_path}}")
-async def {{function.name}}({{function|get_params}}) -> {{function.ret_type|silvera_type_to_pydantic}}:
-    # TODO: IMPLEMENT METHOD
-    pass
-{% endfor %}
