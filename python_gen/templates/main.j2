@@ -5,6 +5,8 @@ from aiokafka import AIOKafkaProducer
 import asyncio
 
 
+from messaging.messaging import consume, aioproducer
+
 {%- for typedef in typedefs %}
 from models.{{typedef.name|lower_case}} import {{typedef.name|upper_case}}
 from api.{{typedef.name|lower_case}} import router as {{typedef.name|upper_case}}Router 
@@ -34,7 +36,16 @@ async def start_db():
     await init_db()
 
 
+@app.on_event("startup")
+async def start_kafka():
+    await aioproducer.start()
+    loop.create_task(consume())
 
+
+@app.on_event("shutdown")
+async def shutdown_kafka():
+    await aioproducer.stop()
+    await consumer.stop()
 
 
 

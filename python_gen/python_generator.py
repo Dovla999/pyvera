@@ -1,5 +1,6 @@
 import os
 import warnings
+import json
 from datetime import datetime
 from collections import defaultdict
 from jinja2 import Environment, FileSystemLoader
@@ -13,6 +14,7 @@ from silvera.core import (
     ServiceDecl,
     APIGateway,
     TypeDef,
+    ConsumerAnnotation,
 )
 from silvera.core import TypedList, TypeDef, TypedSet, TypedDict, Function
 
@@ -115,10 +117,12 @@ class ServiceGenerator:
                 else [f for f in typedef.fields if f.isid][0].name
             )
             class_template = self.env.get_template("model.j2")
-            if not os.path.exists("models"):
-                os.makedirs("models")
+            if not os.path.exists(f"{self.service.name}/models"):
+                os.makedirs(f"{self.service.name}/models")
             class_template.stream({"typedef": typedef, "id_field": id_field}).dump(
-                os.path.join("models", lower_case(typedef.name) + ".py")
+                os.path.join(
+                    f"{self.service.name}/models", lower_case(typedef.name) + ".py"
+                )
             )
 
     def generate_api(self):
@@ -129,11 +133,33 @@ class ServiceGenerator:
                 else [f for f in typedef.fields if f.isid][0].name
             )
             class_template = self.env.get_template("api.j2")
-            if not os.path.exists("api"):
-                os.makedirs("api")
+            if not os.path.exists(f"{self.service.name}/api"):
+                os.makedirs(f"{self.service.name}/api")
             class_template.stream(
                 {"typedef": typedef, "id_field": id_field, "api": self.service.api}
-            ).dump(os.path.join("api", lower_case(typedef.name) + ".py"))
+            ).dump(
+                os.path.join(
+                    f"{self.service.name}/api", lower_case(typedef.name) + ".py"
+                )
+            )
+
+    def generate_messaging(self):
+        class_template = self.env.get_template("messaging/messaging.j2")
+        if not os.path.exists(f"{self.service.name}/messaging"):
+            os.makedirs(f"{self.service.name}/messaging")
+
+        if not self.service.api.internal:
+            return
+        functions = [func for func in self.service.api.internal.functions]
+        topics = set()
+        for function in functions:
+            for annotation in function.msg_annotations:
+                if isinstance(annotation, ConsumerAnnotation):
+                    for sub in annotation.subscriptions:
+                        topics.add(sub.channel.name)
+        class_template.stream({"messaging": '","'.join(topics)}).dump(
+            os.path.join(f"{self.service.name}/messaging", "messaging" + ".py")
+        )
 
     def generate_main(self):
         class_template = self.env.get_template("main.j2")
@@ -141,12 +167,13 @@ class ServiceGenerator:
             {
                 "typedefs": self.service.api.typedefs,
             }
-        ).dump(os.path.join("", "main" + ".py"))
+        ).dump(os.path.join(f"{self.service.name}", "main" + ".py"))
 
     def generate(self):
         self.generate_model()
         self.generate_api()
         self.generate_main()
+        self.generate_messaging()
 
 
 def generate_service(service, output_dir):
