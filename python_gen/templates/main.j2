@@ -1,9 +1,11 @@
+import os
 from fastapi import FastAPI
 from beanie import init_beanie
 import motor.motor_asyncio
 from aiokafka import AIOKafkaProducer
 import asyncio
-
+import uvicorn
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
 from messaging.messaging import consume, aioproducer
 
@@ -12,12 +14,14 @@ from models.{{typedef.name|lower_case}} import {{typedef.name|upper_case}}
 from api.{{typedef.name|lower_case}} import router as {{typedef.name|upper_case}}Router 
 {%- endfor %}
 from api.functions import router as FunctionsRouter 
+from external.consul import consul
 
+KAFKA_INSTANCE = os.getenv("KAFKA_INSTANCE", "localhost:9092")
 
-loop = asyncio.get_event_loop()
 
 async def init_db():
-    client = motor.motor_asyncio.AsyncIOMotorClient("mongodb://localhost:27017/")
+    mongo_url = os.getenv("MONGOURL", "mongodb://localhost:27017/")
+    client = motor.motor_asyncio.AsyncIOMotorClient(f"{mongo_url}")
 
     await init_beanie(
         database=client.db_name,
@@ -32,6 +36,7 @@ async def init_db():
 app = FastAPI()
 
 
+
 @app.on_event("startup")
 async def start_db():
     await init_db()
@@ -39,17 +44,22 @@ async def start_db():
 
 @app.on_event("startup")
 async def start_kafka():
+    loop = asyncio.get_event_loop()
     await aioproducer.start()
     loop.create_task(consume())
 
+@app.on_event("startup")
+async def register_to_consul():
+    consul.agent.service.register("{{service.name}}", port={{service.port}}, tags=["{{service.name}}"])
 
 @app.on_event("shutdown")
 async def shutdown_kafka():
     await aioproducer.stop()
     await consumer.stop()
 
-
-
+@app.on_event("shutdown")
+async def deregister_to_consul():
+    consul.agent.service.deregister("{{service.name}}")
 
 {%- for typedef in typedefs %}
 app.include_router({{typedef.name|upper_case}}Router, tags=["{{typedef.name|upper_case}}s"], prefix="/{{typedef.name|lower_case}}s")

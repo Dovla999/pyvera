@@ -2,23 +2,17 @@
 import requests
 import json
 from circuitbreaker import *
-from datetime.datetime import now
+from datetime import datetime
 
 {%- for typedef in typedefs %}
 from models.{{typedef.name|lower_case}} import {{typedef.name|upper_case}}, {{typedef.name|upper_case}}AllOptional
 {% endfor %}
+from .consul import get_url_for_service
 
+global cached_values
 cached_values = {}
 
 {%- for function in functions %}
-{# @router.{{function.http_verb|all_lower}}("/{{function.rest_path}}")
-async def {{function.name}}({{function|get_params}}) -> {{function.ret_type|silvera_type_to_pydantic}}:
-    # TODO: IMPLEMENT METHOD
-    {%- for message, channel in function.produces %}
-            await produce({{channel.name}},{{message.split(".")[1]}}())
-    {%- endfor %}
-    pass #}
-
 
 {% if function.cb_pattern and function.cb_pattern != "fail_fast" %}
 
@@ -34,7 +28,9 @@ def {{function.name}}_fallback({{function|get_params}}):
     return {{function.ret_type|silvera_type_to_pydantic_default}}
 {% endif %}
 {% if function.cb_pattern and function.cb_pattern == "fallback_cache" %}
-    return cached_values[({{function.name}}, *[{{function|get_params_wo_types}}])]
+    if cached_values[({{function.name}}, *[{{function|get_params_wo_types}}])]:
+        return cached_values[({{function.name}}, *[{{function|get_params_wo_types}}])]
+    return {{function.ret_type|silvera_type_to_pydantic_default}}
 {% endif %}
 
 @circuit(
@@ -42,7 +38,8 @@ def {{function.name}}_fallback({{function|get_params}}):
 )
 {% endif %}
 def {{function.name}}({{function|get_params}}):
-    resp = requests.{{function.dep.http_verb|all_lower}}(f"{{function.rest_path}}")
+    service_url = get_url_for_service("{{function.service_name}}")
+    resp = requests.{{function.dep.http_verb|all_lower}}(f"http://{service_url}/{{function.rest_path}}")
 {% if function.cb_pattern and function.cb_pattern == "fallback_cache" %}
     cached_values[({{function.name}}, *[{{function|get_params_wo_types}}])] = resp.json()
 {% endif %}    

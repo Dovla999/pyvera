@@ -1,0 +1,16 @@
+import consulate
+import json
+
+
+consul = consulate.Consul()
+
+
+
+def get_url_for_service(service_name):
+    _service = consul.catalog.service(service_name)
+    try:
+        service = json.loads(_service)[0]
+        return f"{service['Address']}:{service['ServicePort']}" if service["ServicePort"] else f"{service['Address']}"
+    except BaseException:
+        raise BaseException("External service unreachable.")
+    return ''

@@ -83,6 +83,7 @@ def silvera_type_to_pydantic(field_type):
         "list": "list",
         "set": "set",
         "dict": "dict",
+        "bool": "bool",
     }
     return (
         primitives_map[field_type]
@@ -93,7 +94,7 @@ def silvera_type_to_pydantic(field_type):
 
 def silvera_type_to_pydantic_default(field_type):
     primitives_map = {
-        "date": "now()",
+        "date": "datetime.now()",
         "int": "0",
         "float": "0.0",
         "double": "0.0",
@@ -102,6 +103,7 @@ def silvera_type_to_pydantic_default(field_type):
         "set": "\{\}",
         "dict": "\{\}",
         "void": "",
+        "bool": "False",
     }
     if field_type in primitives_map:
         return primitives_map[field_type]
@@ -196,6 +198,7 @@ class ServiceGenerator:
                         topics.add(sub.channel.name)
                         message_per_function.add(function.name)
                         function_per_channel[sub.channel].add(function.name)
+        self.topics = '","'.join(topics)
         class_template.stream({"messaging": '","'.join(topics)}).dump(
             os.path.join(f"{self.service.name}/messaging", "messaging" + ".py")
         )
@@ -228,34 +231,49 @@ class ServiceGenerator:
 
     def generate_dep_service(self):
         class_template = self.env.get_template("dep_service.j2")
+        if not os.path.exists(f"{self.service.name}/external"):
+            os.makedirs(f"{self.service.name}/external")
         class_template.stream(
             {
                 "api": self.service.api,
                 "functions": self.service.dep_functions,
                 "typedefs": self.service.api.typedefs + self.service.dep_typedefs,
             }
-        ).dump(os.path.join(f"{self.service.name}", "dep_service" + ".py"))
+        ).dump(os.path.join(f"{self.service.name}/external", "dep_service" + ".py"))
+
+    def generate_consul(self):
+        class_template = self.env.get_template("consul.j2")
+        if not os.path.exists(f"{self.service.name}/external"):
+            os.makedirs(f"{self.service.name}/external")
+        class_template.stream({}).dump(
+            os.path.join(f"{self.service.name}/external", "consul" + ".py")
+        )
 
     def generate_main(self):
         class_template = self.env.get_template("main.j2")
         class_template.stream(
             {
                 "typedefs": self.service.api.typedefs,
+                "service": self.service,
+                "messaging": self.topics,
             }
         ).dump(os.path.join(f"{self.service.name}", "main" + ".py"))
 
+    def format_everything(self):
+        import subprocess
+
+        subprocess.run(["black", "."])
+
     def generate(self):
-        for df in self.service.dep_functions:
-            for p in df.params:
-                print(
-                    f"THIS IS SOME UNKNOWN BULLSHIT NO ONE KNOWS WHAT IT IS{str(p.type)}"
-                )
         self.generate_model()
         self.generate_api()
-        self.generate_main()
         self.generate_messaging()
         self.generate_functions()
         self.generate_dep_service()
+        self.generate_consul()
+        self.generate_main()
+        # rest of gens
+        self.format_everything()
 
 
 def generate_service(service, output_dir):
