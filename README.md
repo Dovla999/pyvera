@@ -2,6 +2,13 @@
 
 Python code generator for silvera language
 
+## Libraries/Frameworks used in generated code
+
+- [Fastapi](https://github.com/tiangolo/fastapi)
+- [Beanie](https://github.com/roman-right/beanie/)
+- [AIOKafka](https://github.com/aio-libs/aiokafka)
+- [circuitbreaker](https://github.com/fabfuel/circuitbreaker)
+
 ## Project status
 
 - [x] Setup py
