@@ -144,7 +144,6 @@ class ServiceGenerator:
         if not os.path.exists(f"output/{upper_case(self.service.name)}"):
             os.makedirs(f"output/{upper_case(self.service.name)}")
         open(f"output/{upper_case(self.service.name)}/openapi.json", "a").close()
-        print(self.service.dep_typedefs)
         for typedef in self.service.api.typedefs + self.service.dep_typedefs:
             id_field = (
                 "id"
@@ -290,7 +289,33 @@ def generate_service(service, output_dir):
     generator.generate()
 
 
-def generate_api_gateway():
+def generate_api_gateway(api_gateway, output_dir):
+    env = Environment(loader=FileSystemLoader(get_templates_path()))
+    class_template = self.env.get_template("nginx.j2")
+    import random
+
+    print("GATEWAY")
+    class_template.stream(
+        {
+            "port": api_gateway.port or random.randint(50000, 60000),
+            "gateway_for": [
+                (
+                    g.service.name,
+                    g.service.port,
+                    g.path,
+                )
+                for g in api_gateway.gateway_for
+            ],
+        }
+    ).dump(os.path.join(f"/", "gateway" + ".conf"))
+    pass
+
+
+def generate_service_registry():
+    pass
+
+
+def generate_config_server():
     pass
 
 
@@ -298,7 +323,7 @@ _obj_to_fnc = {
     # ConfigServerDecl: generate_config_server,
     # ServiceRegistryDecl: generate_service_registry,
     ServiceDecl: generate_service,
-    APIGateway: generate_api_gateway,
+    # APIGateway: generate_api_gateway,
 }
 
 
@@ -312,11 +337,13 @@ def generate(decl, output_dir, debug):
         debug(bool): True if debug mode activated. False otherwise.
     """
 
-    print("Called!")
-    print(decl, output_dir)
-    fnc = _obj_to_fnc[decl.__class__]
-    fnc(decl, output_dir)
-    pass
+    # print("Called!")
+    print(decl)
+    try:
+        fnc = _obj_to_fnc[decl.__class__]
+        fnc(decl, output_dir)
+    except:
+        pass
 
 
 python = GeneratorDesc(

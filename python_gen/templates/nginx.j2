@@ -1,0 +1,11 @@
+server {
+        listen       {{port}};
+
+
+        {% for service in gateway_for  %}
+        {{service[0]}}
+        {{service[2]}}
+        {{service[3]}}
+        {% endfor %}
+
+   }

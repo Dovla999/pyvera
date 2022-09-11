@@ -33,7 +33,7 @@ async def init_db():
     )
 
 
-app = FastAPI()
+app = FastAPI(version="{{service.version}}")
 
 
 

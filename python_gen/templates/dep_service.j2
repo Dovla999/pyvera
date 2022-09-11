@@ -39,7 +39,7 @@ def {{function.name}}_fallback({{function|get_params}}):
 {% endif %}
 def {{function.name}}({{function|get_params}}):
     service_url = get_url_for_service("{{function.service_name}}")
-    resp = requests.{{function.dep.http_verb|all_lower}}(f"http://{service_url}/{{function.rest_path}}")
+    resp = requests.{{function.dep.http_verb|all_lower}}(f"http://{service_url}/{{function.rest_path}}/")
 {% if function.cb_pattern and function.cb_pattern == "fallback_cache" %}
     cached_values[({{function.name}}, *[{{function|get_params_wo_types}}])] = resp.json()
 {% endif %}    
