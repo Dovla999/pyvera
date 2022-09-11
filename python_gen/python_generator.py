@@ -259,6 +259,14 @@ class ServiceGenerator:
             }
         ).dump(os.path.join(f"{self.service.name}", "main" + ".py"))
 
+    def generate_run_script(self):
+        class_template = self.env.get_template("run.j2")
+        class_template.stream(
+            {
+                "service": self.service,
+            }
+        ).dump(os.path.join(f"{self.service.name}", "run" + ".sh"))
+
     def format_everything(self):
         import subprocess
 
@@ -272,6 +280,7 @@ class ServiceGenerator:
         self.generate_dep_service()
         self.generate_consul()
         self.generate_main()
+        self.generate_run_script()
         # rest of gens
         self.format_everything()
 
@@ -281,17 +290,13 @@ def generate_service(service, output_dir):
     generator.generate()
 
 
-def generate_service_registry():
-    pass
-
-
 def generate_api_gateway():
     pass
 
 
 _obj_to_fnc = {
     # ConfigServerDecl: generate_config_server,
-    ServiceRegistryDecl: generate_service_registry,
+    # ServiceRegistryDecl: generate_service_registry,
     ServiceDecl: generate_service,
     APIGateway: generate_api_gateway,
 }
