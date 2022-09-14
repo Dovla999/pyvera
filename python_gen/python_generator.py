@@ -260,16 +260,21 @@ class ServiceGenerator:
 
     def generate_run_script(self):
         class_template = self.env.get_template("run.j2")
-        class_template.stream(
-            {
-                "service": self.service,
-            }
-        ).dump(os.path.join(f"{self.service.name}", "run" + ".sh"))
+        # print("called")
+        class_template.stream({"service": self.service, "sh": "#!/bin/sh"}).dump(
+            os.path.join(f"{self.service.name}", "run" + ".sh")
+        )
 
     def format_everything(self):
         import subprocess
 
         subprocess.run(["black", "."])
+
+    def generate_requirements(self):
+        class_template = self.env.get_template("requirements.j2")
+        class_template.stream({}).dump(
+            os.path.join(f"{self.service.name}", "requirements" + ".txt")
+        )
 
     def generate(self):
         self.generate_model()
@@ -279,6 +284,7 @@ class ServiceGenerator:
         self.generate_dep_service()
         self.generate_consul()
         self.generate_main()
+        self.generate_requirements()
         self.generate_run_script()
         # rest of gens
         self.format_everything()
