@@ -276,6 +276,13 @@ class ServiceGenerator:
             os.path.join(f"{self.service.name}", "requirements" + ".txt")
         )
 
+    def generate_run_script(self):
+        class_template = self.env.get_template("dockerfile.j2")
+        # print("called")
+        class_template.stream({"service": self.service, "sh": "#!/bin/sh"}).dump(
+            os.path.join(f"{self.service.name}", "Dockerfile" + "")
+        )
+
     def generate(self):
         self.generate_model()
         self.generate_api()
@@ -286,6 +293,7 @@ class ServiceGenerator:
         self.generate_main()
         self.generate_requirements()
         self.generate_run_script()
+        self.generate_dockerfile()
         # rest of gens
         self.format_everything()
 

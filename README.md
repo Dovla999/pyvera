@@ -22,6 +22,6 @@ Python code generator for silvera language
 - [x] Circuit breaker pattern
 - [x] Start scripts
 - [ ] \*Switch consul with eureka
-- [ ] Containerization
+- [x] Containerization
 
 \* Only realized later during the development that API Gateway, Service Registry generation was only supported for JAVA platform. Consul (Template) and Nginx were considered for the purposes of implementation of these patterns.
